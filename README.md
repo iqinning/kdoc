@@ -96,6 +96,7 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     //index.js
     const kdoc = require('kdoc')
     const plugin = require('./plugin.js')
+    const path = require('path')
     const doc = new kdoc(src,output)//src为源目录,output为输出目录
     const plugin2 = function(ctx) {
         console.log("=====plugin");
@@ -104,7 +105,8 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
         console.log("=====plugin2");
     };
 
-    kdoc.use(plugin); //此时plugin 中的ctx 代表的为KDoc类原型
+    kdoc.use(plugin);//此时plugin 中的ctx 代表的为KDoc类原型
+    kdoc.use(path.resolve(__dirname,'./plugin.js')); //此时plugin 中的ctx 代表的为KDoc类原型
     doc.use(plugin2);
     doc.use(plugin3);
 
