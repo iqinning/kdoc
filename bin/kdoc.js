@@ -1,7 +1,7 @@
 #!/usr/bin/env node  --harmony
 "use strict";
 const program = require("commander");
-const index = require("../index");
+const KDoc = require("../index");
 const path = require("path");
 const chalk = require("chalk");
 
@@ -24,16 +24,6 @@ program
         "./mds"
     )
     .parse(process.argv);
-const md = index(program.src, program.output);
-md.interface("ddd", () => {
-    console.log("=====");
-});
-md.hook.add("initBefore", function() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            console.log("ctx");
-            resolve();
-        }, 1001);
-    });
-});
-md.run();
+
+const doc = new KDoc(program.src, program.output);
+doc.run();

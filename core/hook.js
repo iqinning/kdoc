@@ -1,22 +1,22 @@
 "use strict";
 const chalk = require("chalk");
-class hook {
-    constructor(hookNames) {
-        this.ctx = {};
-        this._ctx = {};
+const hookNames = [
+    "initBefore",
+    "initAfter",
+    "mdBefore",
+    "mdAfter",
+    "htmlBefore",
+    "htmlAfter",
+    "scriptBefore",
+    "scriptAfter",
+    "outputBefore",
+    "outputAfter"
+];
+class Hook {
+    constructor(ctx = {}, names) {
+        this.ctx = ctx;
         this.hooks = {};
-        this.hookNames = hookNames || [
-            "initBefore",
-            "initAfter",
-            "mdBefore",
-            "mdAfter",
-            "htmlBefore",
-            "htmlAfter",
-            "scriptBefore",
-            "scriptAfter",
-            "outputBefore",
-            "outputAfter"
-        ];
+        this.hookNames = names || hookNames;
     }
     isUsableHook(hookName) {
         const _findIndex = this.hookNames.indexOf(hookName);
@@ -49,17 +49,17 @@ class hook {
         }
         this.hooks[hookName] = hookList;
     }
-    async run(hookName) {
+    async run(hookName, ctx = this.ctx, ...arg) {
         this.isUsableHook(hookName);
         const hookList = this.hooks[hookName];
         if (hookList) {
             console.log(`hook ${hookName} is ${chalk.green("running...")}`);
             for (var i = 0; i < hookList.length; i++) {
-                await hookList[i].call(this.ctx);
+                await hookList[i].call(ctx, ctx, ...arg);
             }
             console.log(`hook ${hookName} is ${chalk.green("end...")}`);
         }
     }
 }
 
-module.exports = hook;
+module.exports = Hook;

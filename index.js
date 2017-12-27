@@ -1,57 +1,59 @@
 "use strict";
 const _ = require("lodash");
 const path = require("path");
-const hook = require("./core/hook");
-const plugin = require("./core/plugin");
+const Hook = require("./core/hook");
+const Plugin = require("./core/plugin");
 const glob = require("glob");
 const md = require("markdown-it");
-class main {
-    constructor(src, output, hook, plugin) {
-        this.hook = hook || {};
-        this.hook.ctx = this || {};
-        this.hook._ctx = main;
-        this.plugin = plugin || {};
-        this.plugin.ctx = this || {};
-        this.plugin._ctx = main || {};
+class KDoc {
+    constructor(src, output, hook = new Hook(this), plugin = new Plugin(this)) {
         this.data = {};
+        this.global = {};
+        this.hook = hook || {};
+        this.plugin = plugin || {};
         this.setSrc(src);
         this.setOutput(output);
         this.scanPath();
     }
-    interface(name, handler) {
-        main.prototype[name] = handler;
+    use(plugin, ...arg) {
+        this.plugin.install(plugin, this, ...arg);
     }
-    initHandler() {}
-    htmlHandler() {}
-    scriptHandler() {}
-    mdHandler() {}
-    outputHandler() {}
-    async run() {
+    interface(name, handler) {
+        KDoc.prototype[name] = handler;
+    }
+    async output() {
+        await KDoc.hook.run("outputBefore", this);
+        await this.hook.run("outputBefore", this);
+
+        await KDoc.hook.run("outputAfter", this);
+        await this.hook.run("outputAfter", this);
+    }
+    async init() {
+        await KDoc.hook.run("initBefore", this);
+        await this.hook.run("initBefore", this);
+
+        await KDoc.hook.run("initAfter", this);
+        await this.hook.run("initAfter", this);
+    }
+    async md() {
+        await KDoc.hook.run("mdBefore", this);
+        await this.hook.run("mdBefore", this);
+
+        await KDoc.hook.run("mdAfter", this);
+        await this.hook.run("mdAfter", this);
+    }
+    async run(cb) {
         //初始化操作
-        await this.hook.run("initBefore");
-        this.initHandler();
-        await this.hook.run("initAfter");
-
-        //编译html部分
-        await this.hook.run("htmlBefore");
-        this.htmlHandler();
-        await this.hook.run("htmlAfter");
-
-        //解析脚本部分
-        await this.hook.run("scriptBefore");
-        this.scriptHandler();
-        await this.hook.run("scriptAfter");
+        await this.init();
 
         //编译md部分
-        await this.hook.run("mdBefore");
-        this.mdHandler();
-        await this.hook.run("mdAfter");
+        await this.md();
 
         //输出
-        await this.hook.run("outputBefore");
-        this.outputHandler();
-        await this.hook.run("outputAfter");
+        await this.output();
 
+        _.isFunction(cb) && cb();
+        
         return this;
     }
     setSrc(src) {
@@ -74,7 +76,11 @@ class main {
     }
 }
 
-module.exports = function(src, output, h, p) {
-    const m = new main(src, output, h || new hook(), p || new plugin());
-    return m;
+KDoc.hook = new Hook();
+KDoc.plugin = new Plugin();
+
+KDoc.use = (plugin, ...arg) => {
+    KDoc.plugin.install(plugin, KDoc, ...arg);
 };
+
+module.exports = KDoc;

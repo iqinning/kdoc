@@ -34,13 +34,26 @@ npm install kdoc -S
 *node
 */
 const kdoc = require('kdoc')
-const doc = kdoc(src,output)//src为源目录,output为输出目录
+const doc = new kdoc(src,output)//src为源目录,output为输出目录
+const doc2 = new kdoc(src,output)//src为源目录,output为输出目录
+
 doc.run()
+doc2.run()
+
+async function sequential() {
+    console.log("======串行开始");
+    await doc.run();
+    await doc2.run();
+    console.log("======串行结束");
+}
+sequential(); //串行
+
 ```
 
 ```shell
 #shell
-kdoc -s ./**/* -o ./dist
+kdoc -s ./api/**/*.md -o ./dist/api
+kdoc -s ./pages/**/*.md -o ./dist/pages
 ```
 
 
@@ -48,13 +61,13 @@ kdoc -s ./**/* -o ./dist
 ### features
 
 1. 支持插件机制
-    
+
     > - 插件为node模块只要能够被 require
     > - es6模块请注意`export default {}` 与 `module.exports = {}` 的区别 ,`module.exports = exports['default']`
     > - 如果使用babel 可以使用[babel-plugin-add-module-exports](https://github.com/59naga/babel-plugin-add-module-exports)
     > - 插件提供生命周期钩子, install , 与 uninstall 
     > - 必须导出为可执行函数 , 如不是函数则不会被执行
-    
+
     ```js
     //plugin.js
     const plugin2 = require('./plugin2')
@@ -72,17 +85,10 @@ kdoc -s ./**/* -o ./dist
             //初始化之前
         })
     }
-    
-    plugin.install = function(){
-      console.log('plugin will install')
-    } //插件安装时执行
-    plugin.uninstall = function(){
-      console.log('plugin will uninstall')
-    } //插件卸载时执行
-    
+
     module.exports = plugin
     ```
-    
+
     ```js
     /*
     *node
@@ -90,15 +96,27 @@ kdoc -s ./**/* -o ./dist
     //index.js
     const kdoc = require('kdoc')
     const plugin = require('./plugin.js')
-    const doc = kdoc(src,output)//src为源目录,output为输出目录
-    doc.plugin.install(plugin)
-    doc.run()
+    const doc = new kdoc(src,output)//src为源目录,output为输出目录
+    const plugin2 = function(ctx) {
+        console.log("=====plugin");
+    };
+    const plugin3 = function(ctx) {
+        console.log("=====plugin2");
+    };
+
+    kdoc.use(plugin); //此时plugin 中的ctx 代表的为KDoc类原型
+    doc.use(plugin2);
+    doc.use(plugin3);
+
+    doc.run().then(function(){}) //此方法为异步方法 , 提供then 与 call 两种方式回调
+    doc.run(function(){})
+    doc.run() //无回调
+
     ```
-    
 
 
 2. 提供hook
-    
+
     ```js
     /**
     ctx 提供如下 usable hook :
@@ -112,9 +130,14 @@ kdoc -s ./**/* -o ./dist
     outputAfter
     */
     const kdoc = require('kdoc')
-    const doc = kdoc(src,output)//src为源目录,output为输出目录
-    doc.hook.add('initBefore',function(){
-      const self = this
+    const doc = new kdoc(src,output)//src为源目录,output为输出目录
+    kdoc.hook.add('initBefore',function(ctx){ // 所有实例都会执行
+      const self = this //此为当前实例
+      console.log(ctx) //此为当前实例
+    })
+    doc.hook.add('initBefore',function(){ //当前实例执行
+      const self = this //此为当前实例
+      console.log(ctx) //此为当前实例
       return new Promise(function(resolve) {
         setTimeout(function() {
           console.log("ctx",self);

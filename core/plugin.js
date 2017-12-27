@@ -1,57 +1,49 @@
 "use strict";
 
 const _ = require("lodash");
-class plugin {
-    constructor(plugins) {
-        this.ctx = {};
-        this._ctx = {};
-        this.plugins = plugins || [];
+class Plugin {
+    constructor(ctx = {}) {
+        this.ctx = ctx;
+        this._plugins = [];
     }
     require(plugin) {
         try {
-            require.resolve(plugin);
-            return require(plugin);
+            if (_.isFunction(plugin)) {
+                return plugin;
+            }
+            if (_.isString(plugin)) {
+                require.resolve(plugin);
+                const _plugin = require(plugin);
+                if (_.isFunction(_plugin)) {
+                    return _plugin;
+                }
+            }
+            return false;
         } catch (error) {
-            return null;
+            return false;
         }
     }
-    install(plugin) {
-        try {
-            require.resolve(plugin);
-            plugins.push({
-                path: plugin,
-                source: require(plugin)
-            });
-            return require(plugin);
-        } catch (error) {
-            return null;
+    install(plugin, ctx = this.ctx, ...arg) {
+        const _index = this._plugins.indexOf(plugin);
+        if (_index >= 0) {
+            return this;
         }
+        const _plugin = this.require(plugin);
+        if (_plugin) {
+            _plugin.call(ctx, ctx, ...arg);
+            this._plugins.push(_plugin);
+        }
+        return this;
     }
     uninstall(plugin) {
-        try {
-            const _index = _.findIndex(plugins, function(obj) {
-                return obj.path === plugin;
-            });
+        const _index = this._plugins.indexOf(plugin);
+        if (_index >= 0) {
             plugins.splice(_index, 1);
-        } catch (error) {}
-    }
-    find(plugin) {
-        try {
-            const _index = _.findIndex(plugins, function(obj) {
-                return obj.path === plugin;
-            });
-            return _index > -1 ? plugins[_index]["source"] : null;
-        } catch (error) {
-            return null;
         }
+        return this;
     }
-    all() {
-        const result = [];
-        _.each(plugins, function(plugin) {
-            result.push(plugin.source);
-        });
-        return result;
+    plugins() {
+        return this._plugins;
     }
 }
-
-module.exports = plugin;
+module.exports = Plugin;
