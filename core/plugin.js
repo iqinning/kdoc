@@ -2,6 +2,50 @@
 
 const _ = require("lodash");
 const path = require("path");
+
+function requireGlobal(packageName) {
+    var childProcess = require("child_process");
+    var path = require("path");
+    var fs = require("fs");
+
+    var globalNodeModules = childProcess
+        .execSync("npm root -g")
+        .toString()
+        .trim();
+    var packageDir = path.join(globalNodeModules, packageName);
+    if (!fs.existsSync(packageDir))
+        packageDir = path.join(
+            globalNodeModules,
+            "npm/node_modules",
+            packageName
+        ); //find package required by old npm
+
+    if (!fs.existsSync(packageDir))
+        throw new Error("Cannot find global module '" + packageName + "'");
+
+    var packageMeta = JSON.parse(
+        fs.readFileSync(path.join(packageDir, "package.json")).toString()
+    );
+    var main = path.join(packageDir, packageMeta.main);
+
+    return require(main);
+}
+
+function requirePkg(packageName) {
+    let pkg;
+    try {
+        require.resolve(packageName);
+        pkg = require(packageName);
+    } catch (error) {
+        pkg = requireGlobal(packageName);
+    }
+    if (_.isFunction(pkg)) {
+        return pkg;
+    } else {
+        throw new Error(`Cannot find module '${packageName}'`);
+    }
+}
+
 class Plugin {
     constructor(ctx = {}) {
         this.ctx = ctx;
@@ -13,15 +57,11 @@ class Plugin {
                 return plugin;
             }
             if (_.isString(plugin)) {
-                require.resolve(plugin);
-                const _plugin = require(plugin);
-                if (_.isFunction(_plugin)) {
-                    return _plugin;
-                }
+                return requirePkg(plugin);
             }
-            return false;
+            throw new Error(`Must be a available modules '${plugin}'`);
         } catch (error) {
-            return false;
+            throw error;
         }
     }
     install(plugin) {
@@ -30,9 +70,7 @@ class Plugin {
             return this;
         }
         const _plugin = this.require(plugin);
-        if (_plugin) {
-            this._plugins.push(_plugin);
-        }
+        this._plugins.push(_plugin);
         return this;
     }
     uninstall(plugin) {
