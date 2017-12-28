@@ -10,6 +10,7 @@
 ├── index.js
 ├── core
 │   ├── hook.js         #钩子管理
+│	├── glob.js         #解析路径
 │   └── plugin.js   	#插件管理
 ├── node_modules        #依赖node 包文件
 └── package.json        #包配置文件
@@ -34,14 +35,38 @@ npm install kdoc -S
 *node
 */
 const kdoc = require('kdoc')
-const doc = new kdoc(src , output)//src为源目录,output为输出目录
-const doc2 = new kdoc(src , output)//src为源目录,output为输出目录
+const doc = new kdoc(src , output)//src[array<string>]为源目录,output[string]为输出目录
+const doc2 = new kdoc(src , output)//src[array<string>]为源目录,output[string]为输出目录
+
+doc.run()
+doc2.run()
+
+//串行
+async function run(){
+  await doc.run()
+  await doc2.run()
+} 
+run()
+
+/**
+const ctx = new kdoc()实例
+ctx.data            <object>         共享的数据
+ctx.data.src        <array<string>>  原路径
+ctx.data.paths      <array<string>>  解析后的详细路径
+ctx.data.files      <object>  		 获取到的全部文件
+ctx.data.output     <string>         输出路径
+ctx.hook            <object>         钩子对象
+ctx.plugin          <object>         插件对象
+
+更多请参考源码
+**/
 
 ```
 
 ```shell
 #shell
-kdoc -s ./api/**/*.md -o ./dist/api
+kdoc -h #获取帮助
+kdoc -s ./api/**/*.md -o ./dist/api -p './plugin/plugin1.js,./plugin/plugin2.js'
 kdoc -s ./pages/**/*.md -o ./dist/pages
 ```
 
@@ -54,13 +79,16 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     > - 插件为node模块只要能够被 require
     > - es6模块请注意`export default {}` 与 `module.exports = {}` 的区别 ,`module.exports = exports['default']`
     > - 如果使用babel 可以使用[babel-plugin-add-module-exports](https://github.com/59naga/babel-plugin-add-module-exports)
-    > - 插件提供生命周期钩子, install , 与 uninstall 
     > - 必须导出为可执行函数 , 如不是函数则不会被执行
+    > - 将会按照装载顺序执行
+    > - 相同的plugin只会执行一次
+    > - 支持异步promise
 
     ```js
     //plugin.js
     const plugin2 = require('./plugin2')
     const plugin = function (ctx){ //ctx为kdoc实例
+      	ctx.data.files //这里是所有的文件对象 , key为文件路径 , value为虚拟的File对象 , 在插件中可以通过更改File.contents改变输出结果
         //装载时执行
         ctx.interface('pluginHandler',function(){//在原型链上注册方法
     		console.log('run pluginHandler ing...')
@@ -69,10 +97,11 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
         ctx.pluginHandler2 = function(){//在实例上注册方法
     		console.log('run pluginHandler2 ing...')
         }
-      	ctx.plugin.install(plugin2);//添加额外的插件
+      	ctx.use(plugin2);//添加额外的插件
         ctx.hook.add('initBefore',function (ctx){ //注册新的钩子
             //初始化之前
         })
+      	return new Promise(function(resolve,reject){})
     }
 
     module.exports = plugin
@@ -109,7 +138,7 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
 
     ```js
     /**
-    ctx 提供如下 usable hook :
+    ctx 内置提供如下 usable hook :
     scan.before
     scan.after
     dist.before
@@ -119,8 +148,10 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     const doc = new kdoc(src , output)//src为源目录,output为输出目录
     const doc2 = new kdoc(src , output)//src为源目录,output为输出目录
 
-    kdoc.hook.add('aaaa')
+    /**支持自定义hook**/
+    kdoc.hook.add('aaaa',function(){})
     kdoc.hook.run('aaaa')
+    /**支持自定义hook**/
 
     kdoc.hook.add('dist.before',function(ctx){ // 所有实例都会执行
       const self = this //此为当前实例
@@ -129,7 +160,7 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     doc.hook.add('dist.after',function(){ //当前实例执行
       const self = this //此为当前实例
       console.log(ctx) //此为当前实例
-      return new Promise(function(resolve) {
+      return new Promise(function(resolve,reject) {
         setTimeout(function() {
           console.log("ctx",self);
           resolve();
