@@ -1,24 +1,16 @@
 "use strict";
 const chalk = require("chalk");
-const hookNames = [
-    "initBefore",
-    "initAfter",
-    "mdBefore",
-    "mdAfter",
-    "htmlBefore",
-    "htmlAfter",
-    "scriptBefore",
-    "scriptAfter",
-    "outputBefore",
-    "outputAfter"
-];
+const hookNames = [];
 class Hook {
-    constructor(ctx = {}, names) {
+    constructor(ctx = {}, names = hookNames) {
         this.ctx = ctx;
         this.hooks = {};
-        this.hookNames = names || hookNames;
+        this.hookNames = names;
     }
     isUsableHook(hookName) {
+        if (this.hookNames.length <= 0) {
+            return true;
+        }
         const _findIndex = this.hookNames.indexOf(hookName);
         if (_findIndex < 0) {
             throw new Error(
@@ -54,7 +46,7 @@ class Hook {
         const hookList = this.hooks[hookName];
         if (hookList) {
             console.log(`hook ${hookName} is ${chalk.green("running...")}`);
-            for (var i = 0; i < hookList.length; i++) {
+            for (let i = 0; i < hookList.length; i++) {
                 await hookList[i].call(ctx, ctx, ...arg);
             }
             console.log(`hook ${hookName} is ${chalk.green("end...")}`);

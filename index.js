@@ -3,84 +3,124 @@ const _ = require("lodash");
 const path = require("path");
 const Hook = require("./core/hook");
 const Plugin = require("./core/plugin");
-const glob = require("glob");
-const md = require("markdown-it");
+const glob = require("./core/glob");
+const vinylFile = require("vinyl-file");
+
+const pify = require("pify");
+const fs = pify(require("graceful-fs"));
+const mkdirp = pify(require("mkdirp"));
+const rimraf = pify(require("rimraf"));
+
 class KDoc {
-    constructor(src, output, hook = new Hook(this), plugin = new Plugin(this)) {
-        this.data = {};
-        this.global = {};
+    constructor(
+        src,
+        output,
+        globOptions,
+        hook = new Hook(this),
+        plugin = new Plugin(this)
+    ) {
+        this.data = {
+            files: {},
+            src: [],
+            paths: [],
+            output: ""
+        };
         this.hook = hook || {};
         this.plugin = plugin || {};
+        this.globOptions = globOptions || {};
         this.setSrc(src);
         this.setOutput(output);
-        this.scanPath();
     }
-    use(plugin, ...arg) {
-        this.plugin.install(plugin, this, ...arg);
+    async generateFiles(_paths) {
+        const files = {};
+        for (let i = 0; i < _paths.length; i++) {
+            const _path = _paths[i];
+            files[_path] = await vinylFile.read(_path);
+        }
+        this.data.files = Object.assign(this.data.files, files);
+        return files;
+    }
+    async scan() {
+        await KDoc.hook.run("scan.before");
+        await this.hook.run("scan.before");
+        const paths = await this.paths();
+        await this.generateFiles(paths);
+        await KDoc.hook.run("scan.after");
+        await this.hook.run("scan.after");
+    }
+    async dist() {
+        await KDoc.hook.run("dist.before");
+        await this.hook.run("dist.before");
+        const files = this.data.files;
+        const output = this.data.output;
+        const _paths = Object.keys(files);
+        for (let i = 0; i < _paths.length; i++) {
+            const _path = _paths[i];
+            const _output = path.join(output, _path);
+            const dir = path.dirname(_output);
+            const _contents = files[_path].contents;
+            await mkdirp(dir);
+            await fs.writeFile(_output, _contents, {
+                flag: "w+"
+            });
+        }
+        await KDoc.hook.run("dist.after");
+        await this.hook.run("dist.after");
+    }
+    async del(_paths, globOptions) {
+        _paths = await glob(_paths, globOptions);
+        for (let i = 0; i < _paths.length; i++) {
+            const _path = _paths[i];
+            await rimraf(_path);
+        }
+    }
+    async run() {
+        await this.scan();
+        await KDoc.plugin.run(this);
+        await this.plugin.run(this);
+        await this.dist();
+    }
+    use(plugin) {
+        this.plugin.install(plugin);
     }
     interface(name, handler) {
         KDoc.prototype[name] = handler;
     }
-    async output() {
-        await KDoc.hook.run("outputBefore", this);
-        await this.hook.run("outputBefore", this);
-
-        await KDoc.hook.run("outputAfter", this);
-        await this.hook.run("outputAfter", this);
-    }
-    async init() {
-        await KDoc.hook.run("initBefore", this);
-        await this.hook.run("initBefore", this);
-
-        await KDoc.hook.run("initAfter", this);
-        await this.hook.run("initAfter", this);
-    }
-    async md() {
-        await KDoc.hook.run("mdBefore", this);
-        await this.hook.run("mdBefore", this);
-
-        await KDoc.hook.run("mdAfter", this);
-        await this.hook.run("mdAfter", this);
-    }
-    async run(cb) {
-        //初始化操作
-        await this.init();
-
-        //编译md部分
-        await this.md();
-
-        //输出
-        await this.output();
-
-        _.isFunction(cb) && cb();
-        
-        return this;
-    }
     setSrc(src) {
-        this.data.src = path.resolve(process.cwd(), src);
-        return this;
+        if (!Array.isArray(src)) {
+            src = [src];
+        }
+        this.data.src = this.data.src || [];
+        _.each(src, s => {
+            this.data.src.push(s);
+        });
+        return this.data.src;
     }
     setOutput(output) {
         this.data.output = path.resolve(process.cwd(), output);
-        return this;
     }
-    scanPath(_path) {
-        _path = _path || this.data.src;
-        const dir = path.dirname(_path);
-        const files = glob.sync(_path, {
-            ignore: `${dir}/node_modules/**/*`,
-            nodir: true
-        });
-        this.data.files = files;
-        return this;
+    async paths(_paths) {
+        _paths = _paths || this.data.src;
+        _paths = await glob(
+            _paths,
+            Object.assign(
+                {
+                    nodir: true
+                },
+                this.globOptions
+            )
+        );
+        this.data.paths = _paths;
+        return this.data.paths;
     }
 }
 
+const use = function(plugin) {
+    KDoc.plugin.install(plugin);
+};
+
 KDoc.hook = new Hook();
 KDoc.plugin = new Plugin();
-
-KDoc.use = (plugin, ...arg) => {
-    KDoc.plugin.install(plugin, KDoc, ...arg);
-};
+KDoc.use = use;
 
 module.exports = KDoc;

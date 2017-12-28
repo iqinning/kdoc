@@ -34,19 +34,8 @@ npm install kdoc -S
 *node
 */
 const kdoc = require('kdoc')
-const doc = new kdoc(src,output)//src为源目录,output为输出目录
-const doc2 = new kdoc(src,output)//src为源目录,output为输出目录
-
-doc.run()
-doc2.run()
-
-async function sequential() {
-    console.log("======串行开始");
-    await doc.run();
-    await doc2.run();
-    console.log("======串行结束");
-}
-sequential(); //串行
+const doc = new kdoc(src , output)//src为源目录,output为输出目录
+const doc2 = new kdoc(src , output)//src为源目录,output为输出目录
 
 ```
 
@@ -97,22 +86,21 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     const kdoc = require('kdoc')
     const plugin = require('./plugin.js')
     const path = require('path')
-    const doc = new kdoc(src,output)//src为源目录,output为输出目录
-    const plugin2 = function(ctx) {
+    const doc = new kdoc(src , output)
+
+    const plugin2 = function(ctx,...arg) {
         console.log("=====plugin");
     };
-    const plugin3 = function(ctx) {
-        console.log("=====plugin2");
+
+    const plugin3 = function(ctx,...arg) {
+        console.log("=====plugin2",...arg);
     };
 
-    kdoc.use(plugin);//此时plugin 中的ctx 代表的为KDoc类原型
-    kdoc.use(path.resolve(__dirname,'./plugin.js')); //此时plugin 中的ctx 代表的为KDoc类原型
-    doc.use(plugin2);
-    doc.use(plugin3);
+    kdoc.use(plugin);//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
+    kdoc.use(path.resolve(__dirname,'./plugin.js'));//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
+    doc.use(plugin2,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
+    doc.use(plugin3,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
 
-    doc.run().then(function(){}) //此方法为异步方法 , 提供then 与 call 两种方式回调
-    doc.run(function(){})
-    doc.run() //无回调
 
     ```
 
@@ -122,22 +110,23 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     ```js
     /**
     ctx 提供如下 usable hook :
-    initBefore
-    initAfter
-    mdBefore
-    mdAfter
-    scriptBefore
-    scriptAfter
-    outputBefore
-    outputAfter
+    scan.before
+    scan.after
+    dist.before
+    dist.after
     */
     const kdoc = require('kdoc')
-    const doc = new kdoc(src,output)//src为源目录,output为输出目录
-    kdoc.hook.add('initBefore',function(ctx){ // 所有实例都会执行
+    const doc = new kdoc(src , output)//src为源目录,output为输出目录
+    const doc2 = new kdoc(src , output)//src为源目录,output为输出目录
+
+    kdoc.hook.add('aaaa')
+    kdoc.hook.run('aaaa')
+
+    kdoc.hook.add('dist.before',function(ctx){ // 所有实例都会执行
       const self = this //此为当前实例
       console.log(ctx) //此为当前实例
     })
-    doc.hook.add('initBefore',function(){ //当前实例执行
+    doc.hook.add('dist.after',function(){ //当前实例执行
       const self = this //此为当前实例
       console.log(ctx) //此为当前实例
       return new Promise(function(resolve) {
@@ -147,7 +136,9 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
         }, 1001);
       });
     })
+
     doc.run()
+    doc2.run()
     ```
 
 ### notes
