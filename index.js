@@ -76,6 +76,9 @@ class KDoc {
     async dist() {
         let _output = this.data.output;
         await this.fs.each(async file => {
+            if (!file.contents) {
+                return;
+            }
             file.path = path.join(_output, file.relative);
             file.dirname = path.dirname(file.path);
             await mkdirp(file.dirname);
