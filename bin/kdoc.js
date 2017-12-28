@@ -35,7 +35,7 @@ program
 const doc = new KDoc(program.src, program.output);
 
 _.each(program.plugins, function(plugin) {
-    doc.use(path.resolve(process.cwd(), plugin));
+    doc.use(plugin);
 });
 
 doc.run();
