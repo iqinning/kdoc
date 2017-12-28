@@ -172,4 +172,18 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     doc2.run()
     ```
 
+### API
+```js
+/**  ctx.fs 基于vinyl **/
+ctx.fs.each
+ctx.fs.add
+ctx.fs.remove
+ctx.fs.new
+
+ctx.del
+ctx.use
+ctx.interface
+
+```
+
 ### notes
