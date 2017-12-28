@@ -23,12 +23,12 @@ program
             "glob模式时必须使用引号包裹,逗号分隔"
         )},当前目录的相对路径,或绝对路径`,
         list,
-        ["./**/*.md", "!./node_modules/**/*.md"]
+        ["./**/*.md", "!./node_modules/**/*", "!./dist/**/*"]
     )
     .option(
         "-o, --output <output>",
         "output path,当前目录的相对路径,或绝对路径",
-        "./mds"
+        "./dist"
     )
     .parse(process.argv);
 

@@ -5,7 +5,7 @@ const Hook = require("./core/hook");
 const Plugin = require("./core/plugin");
 const glob = require("./core/glob");
 const vinylFile = require("vinyl-file");
-
+const Vinyl = require("vinyl");
 const pify = require("pify");
 const fs = pify(require("graceful-fs"));
 const mkdirp = pify(require("mkdirp"));
@@ -20,10 +20,9 @@ class KDoc {
         plugin = new Plugin(this)
     ) {
         this.data = {
-            files: {},
+            files: [],
             src: [],
-            paths: [],
-            output: ""
+            output: "./dist"
         };
         this.hook = hook || {};
         this.plugin = plugin || {};
@@ -31,41 +30,63 @@ class KDoc {
         this.setSrc(src);
         this.setOutput(output);
     }
-    async generateFiles(_paths) {
-        const files = {};
-        for (let i = 0; i < _paths.length; i++) {
-            const _path = _paths[i];
-            files[_path] = await vinylFile.read(_path);
-        }
-        this.data.files = Object.assign(this.data.files, files);
-        return files;
+    get fs() {
+        fs.each = async handler => {
+            const _files = this.data.files;
+            for (let index = 0; index < _files.length; index++) {
+                const _file = _files[index];
+                await handler.call(this, _file, index);
+            }
+        };
+        fs.add = _files => {
+            if (!Array.isArray(_files)) {
+                _files = [_files];
+            }
+            this.data.files = [...new Set([...this.data.files, ..._files])];
+        };
+        fs.remove = _files => {
+            if (!Array.isArray(_files)) {
+                _files = [_files];
+            }
+            this.data.files = [
+                ...new Set(
+                    [...this.data.files].filter(x => !_files.includes(x))
+                )
+            ];
+        };
+        fs.new = obj => {
+            return new Vinyl(obj);
+        };
+        return fs;
     }
     async scan() {
         await KDoc.hook.run("scan.before");
         await this.hook.run("scan.before");
         const paths = await this.paths();
-        await this.generateFiles(paths);
+        const _files = [];
+        for (let i = 0; i < paths.length; i++) {
+            const _path = paths[i];
+            const _file = await vinylFile.read(_path);
+            _files.push(_file);
+        }
+        this.fs.add(_files);
         await KDoc.hook.run("scan.after");
         await this.hook.run("scan.after");
     }
     async dist() {
-        await KDoc.hook.run("dist.before");
-        await this.hook.run("dist.before");
-        const files = this.data.files;
-        const output = this.data.output;
-        const _paths = Object.keys(files);
-        for (let i = 0; i < _paths.length; i++) {
-            const _path = _paths[i];
-            const _output = path.join(output, _path);
-            const dir = path.dirname(_output);
-            const _contents = files[_path].contents;
-            await mkdirp(dir);
-            await fs.writeFile(_output, _contents, {
+        let _output = this.data.output;
+        await this.fs.each(async file => {
+            file.path = path.join(_output, file.relative);
+            file.dirname = path.dirname(file.path);
+            await mkdirp(file.dirname);
+            await KDoc.hook.run("dist.before", this, file);
+            await this.hook.run("dist.before", this, file);
+            await fs.writeFile(file.path, file.contents, {
                 flag: "w+"
             });
-        }
-        await KDoc.hook.run("dist.after");
-        await this.hook.run("dist.after");
+            await KDoc.hook.run("dist.after", this, file);
+            await this.hook.run("dist.after", this, file);
+        });
     }
     async del(_paths, globOptions) {
         _paths = await glob(_paths, globOptions);
@@ -110,8 +131,7 @@ class KDoc {
                 this.globOptions
             )
         );
-        this.data.paths = _paths;
-        return this.data.paths;
+        return _paths;
     }
 }
 
