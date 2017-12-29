@@ -17,6 +17,7 @@ program
         "add plugins,可以被require引入的模块名,或js文件路径,逗号分隔",
         list
     )
+    .option("--addmd <addmd>", `是否添加md插件`, true)
     .option(
         "-s, --src <src>",
         `src path,${chalk.red(
@@ -37,5 +38,9 @@ const doc = new KDoc(program.src, program.output);
 _.each(program.plugins, function(plugin) {
     doc.use(plugin);
 });
+
+if (program.addmd === true) {
+    doc.use(KDoc.plugins.md);
+}
 
 doc.run();

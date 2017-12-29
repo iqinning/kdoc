@@ -38,21 +38,29 @@ class KDoc {
     }
     async each(list, handler) {
         for (let index = 0; index < list.length; index++) {
-            const item = list[index];
-            await handler.call(this, item, index);
+            try {
+                const item = list[index];
+                await handler.call(this, item, index);
+            } catch (error) {
+                throw error;
+            }
         }
     }
     async fsEach(handler) {
         const _files = this.data.files;
-        await this.each(_files, handler);
+        try {
+            await this.each(_files, handler);
+        } catch (error) {
+            throw error;
+        }
     }
-    async fsAdd(_files) {
+    fsAdd(_files) {
         if (!Array.isArray(_files)) {
             _files = [_files];
         }
         this.data.files = [...new Set([...this.data.files, ..._files])];
     }
-    async fsRemove(_files) {
+    fsRemove(_files) {
         if (!Array.isArray(_files)) {
             _files = [_files];
         }
@@ -60,7 +68,7 @@ class KDoc {
             ...new Set([...this.data.files].filter(x => !_files.includes(x)))
         ];
     }
-    async fsNew(obj) {
+    fsNew(obj) {
         return new Vinyl(obj);
     }
     async scan() {
