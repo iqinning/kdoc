@@ -1,3 +1,4 @@
+#!/usr/bin/env node  --harmony
 "use strict";
 const _ = require("lodash");
 const path = require("path");
@@ -15,81 +16,86 @@ class KDoc {
     constructor(
         src,
         output,
-        globOptions,
-        hook = new Hook(this),
-        plugin = new Plugin(this)
+        {
+            hook = new Hook(this),
+            plugin = new Plugin(this),
+            globOptions = {},
+            debug = false
+        } = {}
     ) {
         this.data = {
             files: [],
             src: [],
             output: "./dist"
         };
-        this.hook = hook || {};
-        this.plugin = plugin || {};
-        this.globOptions = globOptions || {};
+        this.hook = hook;
+        this.plugin = plugin;
+        this.globOptions = globOptions;
+        this.debug = debug;
         this.setSrc(src);
         this.setOutput(output);
     }
-    get fs() {
-        fs.each = async handler => {
-            const _files = this.data.files;
-            for (let index = 0; index < _files.length; index++) {
-                const _file = _files[index];
-                await handler.call(this, _file, index);
-            }
-        };
-        fs.add = _files => {
-            if (!Array.isArray(_files)) {
-                _files = [_files];
-            }
-            this.data.files = [...new Set([...this.data.files, ..._files])];
-        };
-        fs.remove = _files => {
-            if (!Array.isArray(_files)) {
-                _files = [_files];
-            }
-            this.data.files = [
-                ...new Set(
-                    [...this.data.files].filter(x => !_files.includes(x))
-                )
-            ];
-        };
-        fs.new = obj => {
-            return new Vinyl(obj);
-        };
-        return fs;
+    async each(list, handler) {
+        for (let index = 0; index < list.length; index++) {
+            const item = list[index];
+            await handler.call(this, item, index);
+        }
+    }
+    async fsEach(handler) {
+        const _files = this.data.files;
+        await this.each(_files, handler);
+    }
+    async fsAdd(_files) {
+        if (!Array.isArray(_files)) {
+            _files = [_files];
+        }
+        this.data.files = [...new Set([...this.data.files, ..._files])];
+    }
+    async fsRemove(_files) {
+        if (!Array.isArray(_files)) {
+            _files = [_files];
+        }
+        this.data.files = [
+            ...new Set([...this.data.files].filter(x => !_files.includes(x)))
+        ];
+    }
+    async fsNew(obj) {
+        return new Vinyl(obj);
     }
     async scan() {
-        await KDoc.hook.run("scan.before");
-        await this.hook.run("scan.before");
-        const paths = await this.paths();
+        await KDoc.hook.run("scan.before", this);
+        await this.hook.run("scan.before", this);
+        const _paths = await this.paths();
         const _files = [];
-        for (let i = 0; i < paths.length; i++) {
-            const _path = paths[i];
+        await this.each(_paths, async function(_path) {
             const _file = await vinylFile.read(_path);
             _files.push(_file);
-        }
-        this.fs.add(_files);
-        await KDoc.hook.run("scan.after");
-        await this.hook.run("scan.after");
+        });
+        this.fsAdd(_files);
+        await KDoc.hook.run("scan.after", this);
+        await this.hook.run("scan.after", this);
     }
     async dist() {
         let _output = this.data.output;
-        await this.fs.each(async file => {
+        await KDoc.hook.run("dist.before", this);
+        await this.hook.run("dist.before", this);
+        await this.fsEach(async file => {
+            await KDoc.hook.run("pipe.before", this, file);
+            await this.hook.run("pipe.before", this, file);
             if (!file.contents) {
                 return;
             }
             file.path = path.join(_output, file.relative);
             file.dirname = path.dirname(file.path);
             await mkdirp(file.dirname);
-            await KDoc.hook.run("dist.before", this, file);
-            await this.hook.run("dist.before", this, file);
             await fs.writeFile(file.path, file.contents, {
                 flag: "w+"
             });
-            await KDoc.hook.run("dist.after", this, file);
-            await this.hook.run("dist.after", this, file);
+            await KDoc.hook.run("pipe.after", this, file);
+            await this.hook.run("pipe.after", this, file);
         });
+        await KDoc.hook.run("dist.after", this);
+        await this.hook.run("dist.after", this);
     }
     async del(_paths, globOptions) {
         _paths = await glob(_paths, globOptions);
@@ -99,9 +105,9 @@ class KDoc {
         }
     }
     async run() {
-        await this.scan();
         await KDoc.plugin.run(this);
         await this.plugin.run(this);
+        await this.scan();
         await this.dist();
     }
     use(plugin) {
@@ -115,7 +121,7 @@ class KDoc {
             src = [src];
         }
         this.data.src = this.data.src || [];
-        _.each(src, s => {
+        this.each(src, s => {
             this.data.src.push(s);
         });
         return this.data.src;
@@ -145,5 +151,9 @@ const use = function(plugin) {
 KDoc.hook = new Hook();
 KDoc.plugin = new Plugin();
 KDoc.use = use;
+KDoc.prototype.fs = fs;
+KDoc.prototype.vf = Vinyl;
+KDoc.prototype.mkdirp = mkdirp;
+KDoc.prototype.rimraf = rimraf;
 
 module.exports = KDoc;

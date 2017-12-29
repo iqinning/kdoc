@@ -35,8 +35,8 @@ npm install kdoc -S
 *node
 */
 const kdoc = require('kdoc')
-const doc = new kdoc(src , output)//src[array<string>]为源目录,output[string]为输出目录
-const doc2 = new kdoc(src , output)//src[array<string>]为源目录,output[string]为输出目录
+const doc = new kdoc(src , output , options)//src[array<string>]为源目录,output[string]为输出目录
+const doc2 = new kdoc(src , output , options)//src[array<string>]为源目录,output[string]为输出目录
 
 doc.run()
 doc2.run()
@@ -47,19 +47,6 @@ async function run(){
   await doc2.run()
 } 
 run()
-
-/**
-const ctx = new kdoc()实例
-ctx.data            <object>         共享的数据
-ctx.data.src        <array<string>>  原路径
-ctx.data.paths      <array<string>>  解析后的详细路径
-ctx.data.files      <object>  		 获取到的全部文件
-ctx.data.output     <string>         输出路径
-ctx.hook            <object>         钩子对象
-ctx.plugin          <object>         插件对象
-
-更多请参考源码
-**/
 
 ```
 
@@ -129,9 +116,10 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     kdoc.use(path.resolve(__dirname,'./plugin.js'));//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
     doc.use(plugin2,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
     doc.use(plugin3,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
-
-
     ```
+
+
+    ​```
 
 
 2. 提供hook
@@ -141,6 +129,8 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     ctx 内置提供如下 usable hook :
     scan.before
     scan.after
+    pipe.before
+    pipe.after
     dist.before
     dist.after
     */
@@ -153,13 +143,13 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     kdoc.hook.run('aaaa')
     /**支持自定义hook**/
 
-    kdoc.hook.add('dist.before',function(ctx){ // 所有实例都会执行
+    kdoc.hook.add('pipe.before',function(file){ // 所有实例都会执行
       const self = this //此为当前实例
-      console.log(ctx) //此为当前实例
+      console.log(file) //此为当前文件
     })
-    doc.hook.add('dist.after',function(){ //当前实例执行
+    doc.hook.add('pipe.after',function(file){ // 当前实例执行
       const self = this //此为当前实例
-      console.log(ctx) //此为当前实例
+      console.log(file) //此为当前文件
       return new Promise(function(resolve,reject) {
         setTimeout(function() {
           console.log("ctx",self);
@@ -174,15 +164,6 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
 
 ### API
 ```js
-/**  ctx.fs 基于vinyl **/
-ctx.fs.each
-ctx.fs.add
-ctx.fs.remove
-ctx.fs.new
-
-ctx.del
-ctx.use
-ctx.interface
 
 ```
 

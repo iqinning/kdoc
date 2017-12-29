@@ -45,11 +45,13 @@ class Hook {
         this.isUsableHook(hookName);
         const hookList = this.hooks[hookName];
         if (hookList) {
-            console.log(`hook ${hookName} is ${chalk.green("running...")}`);
+            ctx.debug === true &&
+                console.log(`hook ${hookName} is ${chalk.green("running...")}`);
             for (let i = 0; i < hookList.length; i++) {
-                await hookList[i].call(ctx, ctx, ...arg);
+                await hookList[i].call(ctx, ...arg);
             }
-            console.log(`hook ${hookName} is ${chalk.green("end...")}`);
+            ctx.debug === true &&
+                console.log(`hook ${hookName} is ${chalk.green("end...")}`);
         }
     }
 }
