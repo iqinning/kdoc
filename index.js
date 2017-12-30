@@ -71,6 +71,16 @@ class KDoc {
     fsNew(obj) {
         return new Vinyl(obj);
     }
+    async fsWrite(_path, _content) {
+        if (!_path || !_content) {
+            return;
+        }
+        const dirname = path.dirname(_path);
+        await mkdirp(dirname);
+        await fs.writeFile(_path, _content, {
+            flag: "w+"
+        });
+    }
     async scan() {
         await KDoc.hook.run("scan.before", this);
         await this.hook.run("scan.before", this);
@@ -95,11 +105,7 @@ class KDoc {
                 return;
             }
             file.path = path.join(_output, file.relative);
-            file.dirname = path.dirname(file.path);
-            await mkdirp(file.dirname);
-            await fs.writeFile(file.path, file.contents, {
-                flag: "w+"
-            });
+            await this.fsWrite(file.path, file.contents);
             await KDoc.hook.run("pipe.after", this, file);
             await this.hook.run("pipe.after", this, file);
         });
