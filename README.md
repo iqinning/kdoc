@@ -129,8 +129,7 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     ctx 内置提供如下 usable hook :
     scan.before
     scan.after
-    pipe.before
-    pipe.after
+    pipe
     dist.before
     dist.after
     */
@@ -143,11 +142,11 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     kdoc.hook.run('aaaa')
     /**支持自定义hook**/
 
-    kdoc.hook.add('pipe.before',function(file){ // 所有实例都会执行
+    kdoc.hook.add('pipe',function(file){ // 所有实例都会执行
       const self = this //此为当前实例
       console.log(file) //此为当前文件
     })
-    doc.hook.add('pipe.after',function(file){ // 当前实例执行
+    doc.hook.add('pipe',function(file){ // 当前实例执行
       const self = this //此为当前实例
       console.log(file) //此为当前文件
       return new Promise(function(resolve,reject) {

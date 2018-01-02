@@ -96,21 +96,21 @@ class KDoc {
     }
     async dist() {
         let _output = this.data.output;
-        await KDoc.hook.run("dist.before", this);
-        await this.hook.run("dist.before", this);
         await this.fsEach(async file => {
-            await KDoc.hook.run("pipe.before", this, file);
-            await this.hook.run("pipe.before", this, file);
+            await KDoc.hook.run("pipe", this, file);
+            await this.hook.run("pipe", this, file);
+        });
+        await KDoc.hook.run("dist.before", this, this.data.files);
+        await this.hook.run("dist.before", this, this.data.files);
+        await this.fsEach(async file => {
             if (!file.contents) {
                 return;
             }
             file.path = path.join(_output, file.relative);
             await this.fsWrite(file.path, file.contents);
-            await KDoc.hook.run("pipe.after", this, file);
-            await this.hook.run("pipe.after", this, file);
         });
-        await KDoc.hook.run("dist.after", this);
-        await this.hook.run("dist.after", this);
+        await KDoc.hook.run("dist.after", this, this.data.files);
+        await this.hook.run("dist.after", this, this.data.files);
     }
     async del(_paths, globOptions) {
         _paths = await glob(_paths, globOptions);
