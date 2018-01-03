@@ -2,6 +2,9 @@
 
 const _ = require("lodash");
 const path = require("path");
+const qs = require("qs");
+
+const reg = /^(.*?)\?(.*)/;
 
 function requireGlobal(packageName) {
     var childProcess = require("child_process");
@@ -42,7 +45,9 @@ function requirePkg(packageName) {
     if (_.isFunction(pkg)) {
         return pkg;
     } else {
-        throw new Error(`Cannot find module '${packageName}'`);
+        throw new Error(
+            `Cannot find module '${packageName}' , plugin module must be function`
+        );
     }
 }
 
@@ -57,7 +62,14 @@ class Plugin {
                 return plugin;
             }
             if (_.isString(plugin)) {
-                return requirePkg(plugin);
+                let _plugin = () => {};
+                if (reg.test(plugin)) {
+                    const matched = plugin.match(/^(.*?)\?(.*)/);
+                    _plugin = requirePkg(matched[1])(qs.parse(matched[2]));
+                } else {
+                    _plugin = requirePkg(plugin);
+                }
+                return _plugin;
             }
             throw new Error(`Must be a available modules '${plugin}'`);
         } catch (error) {

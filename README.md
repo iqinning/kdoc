@@ -70,6 +70,7 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     > - 将会按照装载顺序执行
     > - 相同的plugin只会执行一次
     > - 支持异步promise
+    > - 插件如果需要参数请在外部包裹一个函数 内部返回插件函数 , 可以通过qs传递参数
 
     ```js
     //plugin.js
@@ -92,6 +93,31 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     }
 
     module.exports = plugin
+
+
+    /**需要外部传递参数**/
+    const plugin2 = function(options){
+      console.log(options)
+      return function(ctx){
+        ctx.data.files //这里是所有的文件对象 , key为文件路径 , value为虚拟的File对象 , 在插件中可以通过更改File.contents改变输出结果
+        //装载时执行
+        ctx.interface('pluginHandler',function(){//在原型链上注册方法
+    		console.log('run pluginHandler ing...')
+        })
+      	console.log(ctx.data) //kdoc实例中共享的数据
+        ctx.pluginHandler2 = function(){//在实例上注册方法
+    		console.log('run pluginHandler2 ing...')
+        }
+      	ctx.use(plugin2);//添加额外的插件
+        ctx.hook.add('initBefore',function (ctx){ //注册新的钩子
+            //初始化之前
+        })
+      	return new Promise(function(resolve,reject){})
+      }
+    }
+    module.exports = plugin
+
+
     ```
 
     ```js
@@ -101,25 +127,20 @@ kdoc -s ./pages/**/*.md -o ./dist/pages
     //index.js
     const kdoc = require('kdoc')
     const plugin = require('./plugin.js')
+    const plugin2 = require('./plugin2.js')
     const path = require('path')
     const doc = new kdoc(src , output)
-
-    const plugin2 = function(ctx,...arg) {
-        console.log("=====plugin");
-    };
 
     const plugin3 = function(ctx,...arg) {
         console.log("=====plugin2",...arg);
     };
 
     kdoc.use(plugin);//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
-    kdoc.use(path.resolve(__dirname,'./plugin.js'));//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
-    doc.use(plugin2,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
-    doc.use(plugin3,'a','b','c');//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
+    kdoc.use(`${path.resolve(__dirname,'./plugin.js')}?name="wang"&age=20`);//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
+    doc.use(plugin2({a:'',b:''}));//此时plugin 中的ctx 代表doc 实例 , 使用ctx.prototype 将能访问KDoc
     ```
 
 
-    ​```
 
 
 2. 提供hook

@@ -6,6 +6,7 @@ const path = require("path");
 const chalk = require("chalk");
 const _ = require("lodash");
 
+
 const list = function(val) {
     return val.split(",");
 };
@@ -14,7 +15,7 @@ program
     .version("0.1.0")
     .option(
         "-p, --plugins <plugins> <options>",
-        "add plugins,可以被require引入的模块名,或js文件路径,逗号分隔",
+        "add plugins,可以被require引入的模块名,或js文件路径,逗号分隔,qs可以传递参数,请参见文档",
         list
     )
     .option("--addmd <addmd>", `是否添加md插件`, true)
