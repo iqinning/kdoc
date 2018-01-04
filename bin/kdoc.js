@@ -19,6 +19,7 @@ program
         list
     )
     .option("--addmd <addmd>", `是否添加md插件`, true)
+    .option("--addpug <addpug>", `是否添加pug插件`, true)
     .option(
         "-s, --src <src>",
         `src path,${chalk.red(
@@ -43,5 +44,9 @@ _.each(program.plugins, function(plugin) {
 if (program.addmd === true) {
     doc.use(KDoc.plugins.md);
 }
+if (program.addmd === true) {
+    doc.use(KDoc.plugins.pugRender);
+}
+
 
 doc.run();
