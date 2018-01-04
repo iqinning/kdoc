@@ -18,8 +18,8 @@ program
         "add plugins,可以被require引入的模块名,或js文件路径,逗号分隔,qs可以传递参数,请参见文档",
         list
     )
-    .option("--addmd <addmd>", `是否添加md插件`, true)
-    .option("--addpug <addpug>", `是否添加pug插件`, true)
+    .option("--addmd <addmd>", `是否添加md插件`, false)
+    .option("--addpug <addpug>", `是否添加pug插件`, false)
     .option(
         "-s, --src <src>",
         `src path,${chalk.red(
@@ -41,10 +41,10 @@ _.each(program.plugins, function(plugin) {
     doc.use(plugin);
 });
 
-if (program.addmd === true) {
+if (program.addmd) {
     doc.use(KDoc.plugins.md);
 }
-if (program.addmd === true) {
+if (program.addpug) {
     doc.use(KDoc.plugins.pugRender);
 }
 
