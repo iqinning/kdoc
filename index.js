@@ -12,6 +12,7 @@ const fs = pify(require("graceful-fs"));
 const mkdirp = pify(require("mkdirp"));
 const rimraf = pify(require("rimraf"));
 const markedPlugin = require("kdoc-plugin-md");
+const pugRenderPlugin = require("kdoc-plugin-pugrender");
 
 class KDoc {
     constructor(
@@ -166,7 +167,8 @@ const use = function(plugin) {
 KDoc.hook = new Hook();
 KDoc.plugin = new Plugin();
 KDoc.plugins = {
-    md: markedPlugin
+    md: markedPlugin,
+    pugRender: pugRenderPlugin
 };
 KDoc.use = use;
 KDoc.prototype.fs = fs;
