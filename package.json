@@ -14,7 +14,7 @@
         "npm": ">=5.0.0"
     },
     "repository": {
-        "url": "git@newgit.op.ksyun.com:ksyun-fe/kdoc.git",
+        "url": "https://github.com/ksc-fe/kdoc.git",
         "type": "git"
     },
     "dependencies": {
@@ -24,8 +24,8 @@
         "commander": "^2.12.2",
         "glob": "^7.1.2",
         "graceful-fs": "^4.1.11",
-        "kdoc-plugin-md": "git+http://newgit.op.ksyun.com/ksyun-fe/kdoc-plugin-md.git",
-        "kdoc-plugin-pugrender": "git+http://newgit.op.ksyun.com/ksyun-fe/kdoc-plugin-pugrender.git",
+        "kdoc-plugin-md": "^1.0.0",
+        "kdoc-plugin-pugrender": "^1.0.0",
         "lodash": "^4.17.4",
         "mkdirp": "^0.5.1",
         "moment": "^2.20.1",
